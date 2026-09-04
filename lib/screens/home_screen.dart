@@ -20,10 +20,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<BillItem> _items = [];
 
+  // 0.0 means no tax applied.
+  double _taxPercent = 0.0;
+
   final _currency =
       NumberFormat.currency(locale: 'en_US', symbol: 'Rs ', decimalDigits: 0);
 
-  double get _grandTotal => _items.fold(0.0, (sum, item) => sum + item.total);
+  double get _subtotal => _items.fold(0.0, (sum, item) => sum + item.total);
+  double get _taxAmount => _subtotal * _taxPercent / 100;
+  double get _grandTotal => _subtotal + _taxAmount;
+
+  String _formatPercent(double value) =>
+      value % 1 == 0 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
 
   void _addItem() {
     final name = _itemNameController.text.trim();
@@ -50,6 +58,13 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _items.removeAt(index));
   }
 
+  void _toggleTax(double percent) {
+    setState(() {
+      // Tapping the already-selected option turns tax back off.
+      _taxPercent = _taxPercent == percent ? 0.0 : percent;
+    });
+  }
+
   Future<void> _generateBill() async {
     final shopName = _shopNameController.text.trim();
     if (shopName.isEmpty) {
@@ -70,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
       shopName: shopName,
       date: DateTime.now(),
       items: List.of(_items),
+      taxPercent: _taxPercent,
     );
 
     await StorageService.saveBill(bill);
@@ -81,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _items.clear();
+      _taxPercent = 0.0;
     });
   }
 
@@ -207,6 +224,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
           ),
+          if (_items.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _TaxToggleButton(
+                      label: 'Add 2.5% Tax',
+                      selected: _taxPercent == 2.5,
+                      onTap: () => _toggleTax(2.5),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _TaxToggleButton(
+                      label: 'Add 0.5% Tax',
+                      selected: _taxPercent == 0.5,
+                      onTap: () => _toggleTax(0.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -223,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text('Total',
                             style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 14)),
                         Text(
                           _currency.format(_grandTotal),
@@ -232,6 +272,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontSize: 24,
                               fontWeight: FontWeight.bold),
                         ),
+                        if (_taxPercent > 0)
+                          Text(
+                            'Includes ${_formatPercent(_taxPercent)}% tax (${_currency.format(_taxAmount)})',
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 11),
+                          ),
                       ],
                     ),
                   ),
@@ -252,6 +299,41 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A small pill-style toggle button used for the tax options.
+class _TaxToggleButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TaxToggleButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (selected) {
+      return FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: theme.colorScheme.primary,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        child: Text(label),
+      );
+    }
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+      ),
+      child: Text(label),
     );
   }
 }

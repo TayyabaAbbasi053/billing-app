@@ -23,6 +23,9 @@ class _BillViewScreenState extends State<BillViewScreen> {
   final _plainNumber = NumberFormat.decimalPattern('en_US');
   bool _sharing = false;
 
+  String _formatPercent(double value) =>
+      value % 1 == 0 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
+
   Future<void> _shareAsImage() async {
     setState(() => _sharing = true);
     try {
@@ -45,6 +48,7 @@ class _BillViewScreenState extends State<BillViewScreen> {
   Widget build(BuildContext context) {
     final bill = widget.bill;
     final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(bill.date);
+    final hasTax = bill.taxPercent > 0;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bill')),
@@ -72,25 +76,25 @@ class _BillViewScreenState extends State<BillViewScreen> {
                 const SizedBox(height: 16),
                 const DashedDivider(),
                 const SizedBox(height: 8),
-                Row(
+                const Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                         flex: 3,
                         child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))),
-                    const SizedBox(width: 8),
-                    const Expanded(
+                    SizedBox(width: 8),
+                    Expanded(
                         flex: 2,
                         child: Text('Qty',
                             style: TextStyle(fontWeight: FontWeight.bold),
                             textAlign: TextAlign.right)),
-                    const SizedBox(width: 8),
-                    const Expanded(
+                    SizedBox(width: 8),
+                    Expanded(
                         flex: 3,
                         child: Text('Price (Rs)',
                             style: TextStyle(fontWeight: FontWeight.bold),
                             textAlign: TextAlign.right)),
-                    const SizedBox(width: 8),
-                    const Expanded(
+                    SizedBox(width: 8),
+                    Expanded(
                         flex: 3,
                         child: Text('Total (Rs)',
                             style: TextStyle(fontWeight: FontWeight.bold),
@@ -130,6 +134,24 @@ class _BillViewScreenState extends State<BillViewScreen> {
                 const SizedBox(height: 8),
                 const DashedDivider(),
                 const SizedBox(height: 12),
+                if (hasTax) ...[
+                  Row(
+                    children: [
+                      const Expanded(child: Text('Subtotal')),
+                      Text('Rs ${_plainNumber.format(bill.subtotal)}'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                          child:
+                              Text('Tax (${_formatPercent(bill.taxPercent)}%)')),
+                      Text('Rs ${_plainNumber.format(bill.taxAmount)}'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 Row(
                   children: [
                     const Expanded(
